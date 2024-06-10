@@ -3,6 +3,7 @@ install.packages("plotly")
 install.packages("ggdendro")
 install.packages("factoextra")
 install.packages("uwot")
+install.packages("caret")
 library("dplyr")
 library("ggplot2")
 library("stats")
@@ -77,20 +78,31 @@ ggplot(umap.filtered.plot.df, aes(x, y, colour = Status)) + geom_point()
 # 1. Apply hierarchical clustering on dataset after feature selection
 dist.expressions <- dist(filtered.expression.data.t, method = 'euclidean')
 hclust.expressions <- hclust(dist.expressions, method = "complete")
-plot(hclust.expressions)
+
+install.packages("dendextend")
+library(dendextend)
+
+dend <- as.dendrogram(hclust.expressions)
+dend <- color_branches(dend, k = 2)
+dend %>% set("labels_cex", 0.0001) %>% plot
 
 #2. Hierarchical clustering and visualisation with complete, average and ward linkage
 hclust.complete <- hclust(dist.expressions, method = "complete")
 hclust.average <- hclust(dist.expressions, method = "average")
 hclust.ward <- hclust(dist.expressions, method = "ward.D")
 
-#p.complete <- ggdendrogram(hclust.complete, rotate = FALSE)
-#p.average <- ggdendrogram(hclust.average, rotate = FALSE)
-#p.ward <- ggdendrogram(hclust.ward, rotate = FALSE)
+dend.complete <- as.dendrogram(hclust.complete)
+dend.average <- as.dendrogram(hclust.average)
+dend.ward <- as.dendrogram(hclust.ward)
 
-plot(hclust.complete)
-plot(p.average)
-plot(p.ward)
+dend.complete <- color_branches(dend.complete, k = 2)
+dend.complete %>% set("labels_cex", 0.0001) %>% plot
+
+dend.average <- color_branches(dend.average, k = 2)
+dend.average %>% set("labels_cex", 0.0001) %>% plot
+
+dend.ward <- color_branches(dend.ward, k = 2)
+dend.ward %>% set("labels_cex", 0.0001) %>% plot
 
 #3. 
 fviz_silhouette(silhouette(cutree(hclust.expressions, 2), dist.expressions))
@@ -103,3 +115,37 @@ fviz_silhouette(silhouette(cutree(hclust.expressions, 8), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 9), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 10), dist.expressions))
 
+# Topic 3.
+# 1.
+knn.data <- cbind(filtered.expression.data.t, expression.tag.df)
+training <- knn.data[sample(nrow(knn.data), 420),]
+training.classes <- training$Status
+training <- training[,-132]
+
+test <- knn.data[!(row.names(knn.data) %in% row.names(training)),]
+test.classes <- test$Status
+test <- test[,-132]
+
+# 2.
+library(caret)
+knn.results <- knn(train = training, test = test, cl = training.classes, k = 5)
+conf.matrix <- table(knn.results, test.classes)
+confusionMatrix(conf.matrix)
+
+# 3.
+install.packages("rpart.plot")
+library(rpart)
+library(rpart.plot)
+
+model <- rpart(training.classes ~ ., data = training)
+print(summary(model))
+rpart.plot(model)
+predictions <- predict(model, test, type="class")
+conf.matrix.dt <- confusionMatrix(predictions, factor(test.classes))
+print(conf.matrix.dt)
+
+# 4.
+importance <- varImp(model, scale=FALSE)
+importance <- importance[order(-importance2$Overall),, drop=FALSE]
+topten <- importance[1:10,,drop=FALSE]
+print(topten)
