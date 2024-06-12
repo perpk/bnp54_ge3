@@ -86,7 +86,7 @@ install.packages("dendextend")
 library(dendextend)
 
 dend <- as.dendrogram(hclust.expressions)
-dend <- color_branches(dend)
+dend <- color_branches(dend, k = 2)
 dend %>% 
   set("labels", umap.filtered.plot.df$Status) %>%
   set("labels_colors", as.numeric(as.factor(umap.filtered.plot.df$Status)), order_value=TRUE) %>%  
