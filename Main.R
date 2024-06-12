@@ -75,22 +75,52 @@ filtered.expressions.umap <- umap(filtered.expression.data.t)
 layout.filtered <- as.data.frame(filtered.expressions.umap$layout)
 
 umap.filtered.plot.df <- data.frame(x = layout.filtered[,1], y = layout.filtered[,2], Status = expression.tag.df)
-ggplot(umap.filtered.plot.df, aes(x, y, colour = Status)) + geom_point()
+ggplot(umap.filtered.plot.df, aes(x = x, y = y, colour = Status)) + geom_point()
 
 # Topic 2.
 # 1. Apply hierarchical clustering on dataset after feature selection
-dist.expressions <- dist(umap.filtered.plot.df, method = 'euclidean')
+dist.expressions <- dist(umap.filtered.plot.df[,1:2], method = 'euclidean')
 hclust.expressions <- hclust(dist.expressions, method = "complete")
-plot(hclust.expressions, labels=FALSE, main = "Dendrogram after Euclidean distance calc. & complete Linkage")
+
+install.packages("dendextend")
+library(dendextend)
+
+dend <- as.dendrogram(hclust.expressions)
+dend <- color_branches(dend)
+dend %>% 
+  set("labels", umap.filtered.plot.df$Status) %>%
+  set("labels_colors", as.numeric(as.factor(umap.filtered.plot.df$Status)), order_value=TRUE) %>%  
+  set("labels_cex", 0.2) %>% 
+  plot(main = "Euclidean Distance & Complete Linkage")
 
 #2. Hierarchical clustering and visualisation with complete, average and ward linkage
 hclust.complete <- hclust(dist.expressions, method = "complete")
 hclust.average <- hclust(dist.expressions, method = "average")
 hclust.ward <- hclust(dist.expressions, method = "ward.D")
 
-plot(hclust.complete, labels=FALSE, main = "Complete Linkage")
-plot(hclust.average, labels=FALSE, main = "Average Linkage")
-plot(hclust.ward, labels=FALSE, main = "Ward Linkage")
+dend <- as.dendrogram(hclust.expressions)
+dend <- color_branches(dend)
+dend %>% 
+  set("labels", umap.filtered.plot.df$Status) %>%
+  set("labels_colors", as.numeric(as.factor(umap.filtered.plot.df$Status)), order_value=TRUE) %>%  
+  set("labels_cex", 0.2) %>% 
+  plot(main = "Euclidean Distance & Complete Linkage")
+
+dend <- as.dendrogram(hclust.average)
+dend <- color_branches(dend)
+dend %>% 
+  set("labels", umap.filtered.plot.df$Status) %>%
+  set("labels_colors", as.numeric(as.factor(umap.filtered.plot.df$Status)), order_value=TRUE) %>%  
+  set("labels_cex", 0.2) %>% 
+  plot(main = "Average Linkage")
+
+dend <- as.dendrogram(hclust.ward)
+dend <- color_branches(dend)
+dend %>% 
+  set("labels", umap.filtered.plot.df$Status) %>%
+  set("labels_colors", as.numeric(as.factor(umap.filtered.plot.df$Status)), order_value=TRUE) %>%  
+  set("labels_cex", 0.2) %>% 
+  plot(main = "Ward Linkage")
 
 #3. 
 library("cluster")
@@ -98,11 +128,15 @@ fviz_silhouette(silhouette(cutree(hclust.expressions, 2), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 3), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 4), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 5), dist.expressions))
-fviz_silhouette(silhouette(cutree(hclust.expressions, 6), dist.expressions)) # 0.33
+fviz_silhouette(silhouette(cutree(hclust.expressions, 6), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 7), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 8), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 9), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 10), dist.expressions))
+
+clusters <- cutree(hclust.expressions, 2)
+umap.filtered.plot.df$Cluster <- as.factor(clusters)
+ggplot(umap.filtered.plot.df, aes(x = x, y = y, color = Cluster)) + geom_point()
 
 # Topic 3.
 # 1.
@@ -136,6 +170,6 @@ print(conf.matrix.dt)
 
 # 4.
 importance <- varImp(model, scale=FALSE)
-importance <- importance[order(-importance2$Overall),, drop=FALSE]
+importance <- importance[order(-importance$Overall),, drop=FALSE]
 topten <- importance[1:10,,drop=FALSE]
 print(topten)
