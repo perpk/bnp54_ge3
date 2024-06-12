@@ -4,6 +4,9 @@ install.packages("ggdendro")
 install.packages("factoextra")
 install.packages("uwot")
 install.packages("caret")
+install.packages("rpart.plot")
+library("rpart")
+library("rpart.plot")
 library("dplyr")
 library("ggplot2")
 library("stats")
@@ -37,13 +40,13 @@ print(na.gene.list)
 
 # 3. Dimensionality Reduction via UMAP
 expressions.umap <- umap(clean.expression.data)
-expressions.umap.df <- as.data.frame(expressions.umap)
+expressions.umap.df <- as.data.frame(expressions.umap$layout)
 expressions.umap.df$Status <- expression.tag.df$Status
 
 ggplot(expressions.umap.df, aes(x = V1, y = V2, colour = Status)) + geom_point()
 
 expressions.3component.umap <- umap(clean.expression.data, n_components=3)
-layout3d <- as.data.frame(expressions.3component.umap)
+layout3d <- as.data.frame(expressions.3component.umap$layout)
 layout3d$Status <- expression.tag.df$Status
 umap.plot.3d.df <- data.frame(x = layout3d[,1], y = layout3d[,2], z = layout3d[,3], Status = expression.tag.df)
 plot_ly(umap.plot.3d.df, x = ~x, y = ~y, z = ~z, color = umap.plot.3d.df$Status)
@@ -69,47 +72,33 @@ filtered.expression.data <- filtered.expression.data[,1:600]
 filtered.expression.data.t <- t(filtered.expression.data)
 
 filtered.expressions.umap <- umap(filtered.expression.data.t)
-layout.filtered <- as.data.frame(filtered.expressions.umap)
+layout.filtered <- as.data.frame(filtered.expressions.umap$layout)
 
 umap.filtered.plot.df <- data.frame(x = layout.filtered[,1], y = layout.filtered[,2], Status = expression.tag.df)
 ggplot(umap.filtered.plot.df, aes(x, y, colour = Status)) + geom_point()
 
 # Topic 2.
 # 1. Apply hierarchical clustering on dataset after feature selection
-dist.expressions <- dist(filtered.expression.data.t, method = 'euclidean')
+dist.expressions <- dist(umap.filtered.plot.df, method = 'euclidean')
 hclust.expressions <- hclust(dist.expressions, method = "complete")
-
-install.packages("dendextend")
-library(dendextend)
-
-dend <- as.dendrogram(hclust.expressions)
-dend <- color_branches(dend, k = 2)
-dend %>% set("labels_cex", 0.0001) %>% plot
+plot(hclust.expressions, labels=FALSE, main = "Dendrogram after Euclidean distance calc. & complete Linkage")
 
 #2. Hierarchical clustering and visualisation with complete, average and ward linkage
 hclust.complete <- hclust(dist.expressions, method = "complete")
 hclust.average <- hclust(dist.expressions, method = "average")
 hclust.ward <- hclust(dist.expressions, method = "ward.D")
 
-dend.complete <- as.dendrogram(hclust.complete)
-dend.average <- as.dendrogram(hclust.average)
-dend.ward <- as.dendrogram(hclust.ward)
-
-dend.complete <- color_branches(dend.complete, k = 2)
-dend.complete %>% set("labels_cex", 0.0001) %>% plot
-
-dend.average <- color_branches(dend.average, k = 2)
-dend.average %>% set("labels_cex", 0.0001) %>% plot
-
-dend.ward <- color_branches(dend.ward, k = 2)
-dend.ward %>% set("labels_cex", 0.0001) %>% plot
+plot(hclust.complete, labels=FALSE, main = "Complete Linkage")
+plot(hclust.average, labels=FALSE, main = "Average Linkage")
+plot(hclust.ward, labels=FALSE, main = "Ward Linkage")
 
 #3. 
+library("cluster")
 fviz_silhouette(silhouette(cutree(hclust.expressions, 2), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 3), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 4), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 5), dist.expressions))
-fviz_silhouette(silhouette(cutree(hclust.expressions, 6), dist.expressions))
+fviz_silhouette(silhouette(cutree(hclust.expressions, 6), dist.expressions)) # 0.33
 fviz_silhouette(silhouette(cutree(hclust.expressions, 7), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 8), dist.expressions))
 fviz_silhouette(silhouette(cutree(hclust.expressions, 9), dist.expressions))
@@ -128,6 +117,7 @@ test <- test[,-132]
 
 # 2.
 library(caret)
+library(class)
 knn.results <- knn(train = training, test = test, cl = training.classes, k = 5)
 conf.matrix <- table(knn.results, test.classes)
 confusionMatrix(conf.matrix)
